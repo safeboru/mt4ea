@@ -1,0 +1,418 @@
+#include <Trade\Trade.mqh>
+#include <Arrays\ArrayObj.mqh>
+
+// EA 属性
+input string EA_Name = "CustomEA";
+input int MagicNumber = 1234;
+
+// 定义一个结构体来存储交易组设置
+struct TradeGroup {
+   int id;
+   double accountEquityThreshold;
+   CArrayObj *products;
+};
+
+// 定义一个结构体来存储交易产品设置
+struct TradeProduct {
+   string symbol;
+   double startLotSize;
+   double startPosition;
+   bool isBuy;
+   int stopLossPoints;
+   int maxOrders;
+   int ordersAfterLoss;
+   double additionalLotMultiplier;
+   double lockInProfitPoints;
+   double lockInProfitAmount;
+   int profitLockPoints;      // 累积盈利点数锁定
+   double profitLockAmount;   // 累积盈利金额锁定
+   int maxPendingOrders;      // 每个方向最多挂单数
+   int profitPointsForAdditionalOrder;  // 盈利点数增加额外订单
+   int numberOfStopLosses; // 止损次数累计
+   double multiplierAfterStopLosses; // 止损累计达到一定次数后，顺单手数的倍数
+   double profitPointsToClose; // 盈利点数达到此值时自动关闭所有订单
+   double profitAmountToClose; // 盈利金额达到此值时自动关闭所有订单
+};
+
+class CustomEA : public CExpert {
+public:
+   CustomEA();
+   ~CustomEA();
+
+protected:
+   virtual void OnInit();
+   virtual void OnDeinit();
+   virtual void OnTick();
+
+private:
+   CTrade m_trade;
+   CArrayObj m_tradeGroups;
+};
+
+CustomEA::CustomEA() {
+}
+
+CustomEA::~CustomEA() {
+}
+
+void CustomEA::OnInit() {
+   // 在此处初始化交易组和产品
+   // 如，创建一个交易组并将产品添加到其中
+}
+
+void CustomEA::OnDeinit() {
+}
+
+void CustomEA::OnTick() {
+   double accountEquity = AccountEquity();
+
+   // 遍历交易组
+   for (int i = 0; i < m_tradeGroups.Total(); i++) {
+      TradeGroup *tradeGroup = (TradeGroup *)m_tradeGroups.At(i);
+
+      // 检查账户净值是否低于此组的阈值
+      if (accountEquity < tradeGroup->accountEquityThreshold) {
+         // 遍历此交易组中的产品
+         for (int j = 0; j < tradeGroup->products->Total(); j++) {
+            TradeProduct *tradeProduct = (TradeProduct *)tradeGroup->products->At(j);
+
+            // 根据产品设置实现交易逻辑
+            // 如，用指定的手数和位置开启新订单
+            // 检查现有订单，设置止损，获利等。
+         }
+      }
+   }
+
+   // 累积盈利点数和金额锁定功能
+   for (int j = 0; j < tradeGroup->products->Total(); j++) {
+      TradeProduct *tradeProduct = (TradeProduct *)tradeGroup->products->At(j);
+
+      // 计算累积盈利
+      double cumulativeProfit = CalculateCumulativeProfit(tradeGroup->id, tradeProduct->symbol);
+
+      // 检查累积盈利是否达到锁定点数或金额
+      if (cumulativeProfit >= tradeProduct->profitLockPoints * _Point || cumulativeProfit >= tradeProduct->profitLockAmount) {
+         // 结束该产品的所有正在执行的单和所有挂单
+         CloseAllOrdersAndDeletePending(tradeGroup->id, tradeProduct->symbol);
+      } else {
+         // 根据产品设置实现交易逻辑..
+      }
+   }
+
+   // 实现为首个执行的产品创建挂单的功能
+   // 遍历此交易组中的产品
+   for (int j = 0; j < tradeGroup->products->Total(); j++) {
+      TradeProduct *tradeProduct = (TradeProduct *)tradeGroup->products->At(j);
+
+      // 根据产品设置实现交易逻辑
+      // ...
+
+      // 为首个执行的产品创建挂单
+      if (j == 0) {
+         CreatePendingOrders(tradeGroup->id, tradeProduct);
+      }
+   }
+
+   // 为指定产品创建顺单的功能
+   // 遍历此交易组中的产品
+   for (int j = 0; j < tradeGroup->products->Total(); j++) {
+      TradeProduct *tradeProduct = (TradeProduct *)tradeGroup->products->At(j);
+
+      // 根据产品设置实现交易逻辑
+      // ...
+
+      // 为首个执行的产品创建挂单
+      if (j == 0) {
+         CreatePendingOrders(tradeGroup->id, tradeProduct);
+      }
+
+      // 检查并为指定产品创建顺单
+      CheckAndCreateAdditionalOrders(tradeGroup->id, tradeProduct);
+   }
+
+   // 实现检查并平仓以及补充反方向订单的功能
+   // 遍历此交易组中的产品
+   for (int j = 0; j < tradeGroup->products->Total(); j++) {
+      TradeProduct *tradeProduct = (TradeProduct *)tradeGroup->products->At(j);
+
+      // 根据产品设置实现交易逻辑
+      // ...
+
+      // 为首个执行的产品创建挂单
+      if (j == 0) {
+         CreatePendingOrders(tradeGroup->id, tradeProduct);
+      }
+
+      // 检查并为指定产品创建顺单
+      CheckAndCreateAdditionalOrders(tradeGroup->id, tradeProduct);
+
+      // 检查并平仓以及补充反方向订单
+      CheckAndCloseOrders(tradeGroup->id, tradeProduct);
+   }
+
+   // 实现检查并关闭指定产品的所有订单和挂单
+   // 遍历此交易组中的产品
+   for (int j = 0; j < tradeGroup->products->Total(); j++) {
+      TradeProduct *tradeProduct = (TradeProduct *)tradeGroup->products->At(j);
+
+      // 根据产品设置实现交易逻辑
+      // ...
+
+      // 为首个执行的产品创建挂单
+      if (j == 0) {
+         CreatePendingOrders(tradeGroup->id, tradeProduct);
+      }
+
+      // 检查并为指定产品创建顺单
+      CheckAndCreateAdditionalOrders(tradeGroup->id, tradeProduct);
+
+      // 检查并平仓以及补充反方向订单
+      CheckAndCloseOrders(tradeGroup->id, tradeProduct);
+
+      // 检查并关闭指定产品的所有订单和挂单
+      CheckAndCloseAllOrders(tradeGroup->id, tradeProduct);
+   }
+
+   // 检查账户净值是否低于设定值，如是，则关闭所有订单和挂单并启动新的交易组
+   double accountEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+   if (accountEquity < tradeGroup->accountEquityThreshold) {
+      for (int i = 0; i < OrdersTotal(); i++) {
+         if (OrderSelect(i, SELECT_BY_POS) && OrderMagicNumber() == tradeGroup->id) {
+            if (OrderType() < 2) {
+               m_trade.OrderClose(OrderTicket(), OrderLots(), OrderClosePrice(), 3);
+            } else {
+               m_trade.OrderDelete(OrderTicket());
+            }
+         }
+      }
+
+      // 启动新的交易组（如：加载新的交易设置）
+   }
+}
+
+// 添加交易组
+void CustomEA::AddTradeGroup(double accountEquityThreshold) {
+   TradeGroup *tradeGroup = new TradeGroup();
+   tradeGroup->id = m_tradeGroups.Total();
+   tradeGroup->accountEquityThreshold = accountEquityThreshold;
+   tradeGroup->products = new CArrayObj();
+   m_tradeGroups.Add(tradeGroup);
+}
+
+// 添加产品到交易组
+void CustomEA::AddProductToTradeGroup(int groupId, string symbol, double startLotSize, double startPosition, bool isBuy, int stopLossPoints, int maxOrders, int ordersAfterLoss, double additionalLotMultiplier, double lockInProfitPoints, double lockInProfitAmount) {
+   TradeGroup *tradeGroup = GetTradeGroupById(groupId);
+
+   if (tradeGroup != NULL) {
+      TradeProduct *tradeProduct = new TradeProduct();
+      tradeProduct->symbol = symbol;
+      tradeProduct->startLotSize = startLotSize;
+      tradeProduct->startPosition = startPosition;
+      tradeProduct->isBuy = isBuy;
+      tradeProduct->stopLossPoints = stopLossPoints;
+      tradeProduct->maxOrders = maxOrders;
+      tradeProduct->ordersAfterLoss = ordersAfterLoss;
+      tradeProduct->additionalLotMultiplier = additionalLotMultiplier;
+      tradeProduct->lockInProfitPoints = lockInProfitPoints;
+      tradeProduct->lockInProfitAmount = lockInProfitAmount;
+      tradeGroup->products->Add(tradeProduct);
+   }
+}
+
+// 获取指定ID的交易组
+TradeGroup *CustomEA::GetTradeGroupById(int id) {
+   for (int i = 0; i < m_tradeGroups.Total(); i++) {
+      TradeGroup *tradeGroup = (TradeGroup *)m_tradeGroups.At(i);
+      if (tradeGroup->id == id) {
+         return tradeGroup;
+      }
+   }
+   return NULL;
+}
+
+// 删除交易组
+void CustomEA::DeleteTradeGroup(int groupId) {
+   TradeGroup *tradeGroup = GetTradeGroupById(groupId);
+   if (tradeGroup != NULL) {
+      m_tradeGroups.Delete(tradeGroup);
+      delete tradeGroup;
+   }
+}
+
+// 修改交易组阈值
+void CustomEA::ModifyTradeGroupThreshold(int groupId, double newAccountEquityThreshold) {
+   TradeGroup *tradeGroup = GetTradeGroupById(groupId);
+   if (tradeGroup != NULL) {
+      tradeGroup->accountEquityThreshold = newAccountEquityThreshold;
+   }
+}
+
+// 删除指定交易组中的产品
+void CustomEA::DeleteProductFromTradeGroup(int groupId, string symbol) {
+   TradeGroup *tradeGroup = GetTradeGroupById(groupId);
+
+   if (tradeGroup != NULL) {
+      for (int i = 0; i < tradeGroup->products->Total(); i++) {
+         TradeProduct *tradeProduct = (TradeProduct *)tradeGroup->products->At(i);
+         if (tradeProduct->symbol == symbol) {
+            tradeGroup->products->Delete(tradeProduct);
+            delete tradeProduct;
+            break;
+         }
+      }
+   }
+}
+
+// 计算累积盈利
+double CustomEA::CalculateCumulativeProfit(int groupId, string symbol) {
+   double cumulativeProfit = 0.0;
+   int totalOrders = OrdersTotal();
+
+   for (int i = 0; i < totalOrders; i++) {
+      if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+         if (OrderSymbol() == symbol && OrderMagicNumber() == groupId) {
+            cumulativeProfit += OrderProfit();
+         }
+      }
+   }
+
+   return cumulativeProfit;
+}
+
+// 结束指定产品的所有正在执行的单和所有挂单
+void CustomEA::CloseAllOrdersAndDeletePending(int groupId, string symbol) {
+   int totalOrders = OrdersTotal();
+
+   for (int i = 0; i < totalOrders; i++) {
+      if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES)) {
+         if (OrderSymbol() == symbol && OrderMagicNumber() == groupId) {
+            if (OrderType() <= OP_SELL) {
+               m_trade.OrderClose(OrderTicket(), OrderLots(), OrderClosePrice(), 3, clrNONE);
+            } else {
+               m_trade.OrderDelete(OrderTicket(), clrNONE);
+            }
+         }
+      }
+   }
+}
+
+// 为指定产品创建挂单
+void CustomEA::CreatePendingOrders(int groupId, TradeProduct *tradeProduct) {
+   double currentPrice = SymbolInfoDouble(tradeProduct->symbol, SYMBOL_BID);
+   double stopLossPrice = 0.0;
+   double pendingOrderPrice = 0.0;
+   ENUM_ORDER_TYPE orderType;
+
+   for (int i = 1; i <= tradeProduct->maxPendingOrders; i++) {
+      if (tradeProduct->isBuy) {
+         stopLossPrice = currentPrice - tradeProduct->stopLossPoints * _Point;
+         pendingOrderPrice = stopLossPrice - i * tradeProduct->stopLossPoints * _Point;
+         orderType = OP_SELLSTOP;
+      } else {
+         stopLossPrice = currentPrice + tradeProduct->stopLossPoints * _Point;
+         pendingOrderPrice = stopLossPrice + i * tradeProduct->stopLossPoints * _Point;
+         orderType = OP_BUYSTOP;
+      }
+
+      // 创建挂单
+      m_trade.OrderSend(tradeProduct->symbol, orderType, tradeProduct->startLotSize, pendingOrderPrice, 3, pendingOrderPrice - tradeProduct->stopLossPoints * _Point, 0, groupId);
+   }
+}
+
+// 检查并为指定产品创建顺单
+void CustomEA::CheckAndCreateAdditionalOrders(int groupId, TradeProduct *tradeProduct) {
+   double currentPrice = SymbolInfoDouble(tradeProduct->symbol, SYMBOL_BID);
+   double initialOrderPrice = 0.0;
+   double stopLossPrice = 0.0;
+   ENUM_ORDER_TYPE orderType;
+
+   // 查找初始订单
+   for (int i = 0; i < OrdersTotal(); i++) {
+      if (OrderSelect(i, SELECT_BY_POS) && OrderMagicNumber() == groupId && OrderSymbol() == tradeProduct->symbol && OrderType() < 2) {
+         initialOrderPrice = OrderOpenPrice();
+         break;
+      }
+   }
+
+   if (initialOrderPrice == 0.0) return;
+
+   // 计算点数差
+   double pointsDifference = MathAbs((currentPrice - initialOrderPrice) / _Point);
+
+   // 当前点数达到设置值时创建顺单
+   if (pointsDifference >= tradeProduct->profitPointsForAdditionalOrder) {
+      if (tradeProduct->isBuy) {
+         stopLossPrice = currentPrice - tradeProduct->stopLossPoints * _Point;
+         orderType = OP_BUY;
+      } else {
+         stopLossPrice = currentPrice + tradeProduct->stopLossPoints * _Point;
+         orderType = OP_SELL;
+      }
+
+      // 创建顺单
+      m_trade.OrderSend(tradeProduct->symbol, orderType, tradeProduct->startLotSize, currentPrice, 3, stopLossPrice, 0, groupId);
+   }
+}
+
+// 实现止损逻辑
+void CustomEA::CheckAndCloseOrders(int groupId, TradeProduct *tradeProduct) {
+   for (int i = 0; i < OrdersTotal(); i++) {
+      if (OrderSelect(i, SELECT_BY_POS)) {
+         if (OrderMagicNumber() == groupId && OrderSymbol() == tradeProduct->symbol && OrderType() < 2) {
+            double currentPrice = (OrderType() == OP_BUY) ? SymbolInfoDouble(tradeProduct->symbol, SYMBOL_BID) : SymbolInfoDouble(tradeProduct->symbol, SYMBOL_ASK);
+            double pointsDifference = MathAbs((OrderOpenPrice() - currentPrice) / _Point);
+
+            if (pointsDifference >= tradeProduct->stopLossPoints) {
+               m_trade.OrderClose(OrderTicket(), OrderLots(), currentPrice, 3);
+
+               // 检查是否需要补充反方向订单
+               tradeProduct->numberOfStopLosses++;
+               if (tradeProduct->numberOfStopLosses % tradeProduct->stopLossLimit == 0) {
+                  tradeProduct->startLotSize *= tradeProduct->multiplierAfterStopLosses;
+               }
+
+               // 立即补充反方向订单
+               ENUM_ORDER_TYPE oppositeOrderType = (OrderType() == OP_BUY) ? OP_SELL : OP_BUY;
+               double stopLossPrice = (oppositeOrderType == OP_BUY) ? currentPrice - tradeProduct->stopLossPoints * _Point : currentPrice + tradeProduct->stopLossPoints * _Point;
+               m_trade.OrderSend(tradeProduct->symbol, oppositeOrderType, tradeProduct->startLotSize, currentPrice, 3, stopLossPrice, 0, groupId);
+            }
+         }
+      }
+   }
+}
+
+// 检查并关闭指定产品的所有订单和挂单
+void CustomEA::CheckAndCloseAllOrders(int groupId, TradeProduct *tradeProduct) {
+   double totalProfitPoints = 0;
+   double totalProfitAmount = 0;
+
+   for (int i = 0; i < OrdersTotal(); i++) {
+      if (OrderSelect(i, SELECT_BY_POS)) {
+         if (OrderMagicNumber() == groupId && OrderSymbol() == tradeProduct->symbol) {
+            if (OrderType() < 2) {
+               totalProfitPoints += MathAbs((OrderOpenPrice() - OrderClosePrice()) / _Point);
+               totalProfitAmount += OrderProfit();
+            }
+
+            if (totalProfitPoints >= tradeProduct->profitPointsToClose || totalProfitAmount >= tradeProduct->profitAmountToClose) {
+               m_trade.OrderClose(OrderTicket(), OrderLots(), OrderClosePrice(), 3);
+            } else if (OrderType() >= 2) {
+               m_trade.OrderDelete(OrderTicket());
+            }
+         }
+      }
+   }
+}
+
+// 初始化函数                                                   
+int OnInit() {
+   CustomEA *expert = new CustomEA();
+   if (!expert->IsValid()) {
+      delete expert;
+      return (INIT_FAILED);
+   }
+
+   SetExpert(expert);
+
+   return (INIT_SUCCEEDED);
+}
